@@ -1,30 +1,72 @@
 # Resolve It
 
-Resolve It is a public concern reporting service with private organization workspaces. Public users can submit without an account and can optionally leave contact details. Organization workspaces stay unpublished until a platform administrator approves the application.
+Resolve It is a public concern reporting platform. People can submit concerns without creating an account, choose an approved organization, and optionally provide contact details. Organization staff use private workspaces to review and resolve cases. Organization applications stay out of the public directory until a platform administrator approves them.
 
-## Data ownership
+## Run locally
 
-- **Supabase PostgreSQL** stores the approved organization directory, applications, departments, memberships, invitations, cases, separately held optional contacts, messages, workflow events, and temporary rate-limit hashes. Run `supabase/migrations/0001_resolve_it.sql` in the Supabase SQL Editor. It creates schema objects only; it inserts no organizations, people, or cases.
-- **Supabase private Storage** holds organization verification documents in the `organization-evidence` bucket. Browser access is not granted; the application server uploads documents, and platform admins receive five-minute signed review links. Case attachments are not supported.
-- **TideCloak** manages staff identity and IAM: sign-in, realm/client configuration, and platform-admin role. It does not store Resolve It cases or provide the application database. Resolve It stores TideCloak subject identifiers in memberships and audit events.
-- **Tide Raziel MCP** is a development-time assistant integration, not an application runtime dependency. It does not receive or store Resolve It records.
+### Requirements
 
-Case text and verification documents are stored in Supabase by the app. Contact details are written to the separate `case_contacts` table and are returned only by the organization API after staff identity and active organization membership checks. Anonymous follow-up secrets are shown once; only a salted scrypt verifier is persisted. Request throttling stores a keyed hash of the caller network address, cleaned after one day. Hosting, database, identity, and network providers can have their own operational logs and retention settings; configure those for the deployment.
+- Node.js 20.9 or later
+- npm
+- A Supabase project for database-backed features
 
-## Local setup
+### 1. Install dependencies
 
-1. Install the Node.js version supported by the current Next.js release and run `npm install`.
-2. Copy `.env.example` to `.env.local` and set the Supabase project URL, public anon key, service-role key, and a long random `RATE_LIMIT_SECRET`. Keep the service-role key server-only.
-3. Run the SQL migration against a new Supabase project. Enable TLS and keep database backups and access limited to project operators. The migration uses RLS as defense in depth; server routes use the service-role key only after their own checks.
-4. Create a TideCloak client using Tide's supported Next.js setup. For local development, place its generated adapter configuration at `tidecloak.json` (or set `TIDECLOAK_CONFIG_PATH`). For Vercel, set the full adapter JSON in the server-only `TIDECLOAK_CONFIG_JSON` environment variable so the config is present in serverless functions. Keep it out of source control. Configure the hosted realm/client and exact allowed callback/logout URLs for the deployment, including `/auth/redirect` and the SDK's silent SSO check URL. Configure the `platform-admin` realm role and manually grant it to the first trusted Resolve It administrator. Never add a public platform-admin registration path.
-5. Set `NEXT_PUBLIC_APP_URL` to the canonical HTTPS site origin. Add all environment variables to the hosting provider (for example Vercel) and deploy the Next.js app. Add the deployed origin and callback URLs to TideCloak. Do not enable organization applications until sign-in and server-side token verification have been confirmed against the hosted realm.
-6. Register an organization through the organization portal. The administrator checks the official email and evidence before approving. Then the owner can create departments and invite staff. Staff can assign cases to active members, respond in the private case inbox, and update case status. No seed or demo records are needed.
+```bash
+npm install
+```
 
-## Production configuration checklist
+### 2. Configure environment variables
 
-- Supabase project with the migration applied and secrets configured.
-- Hosted TideCloak realm/client, verified email flow, client adapter file, HTTPS callback/logout URLs, and manually assigned platform-admin role.
-- Public HTTPS deployment with `NEXT_PUBLIC_APP_URL`, Supabase keys, Tide config path, and strong `RATE_LIMIT_SECRET` configured as server environment variables.
-- Confirm browser pages never receive the service-role key or raw anonymous secret; confirm pending/rejected organizations do not appear in the public directory; review provider logs and retention before inviting real users.
+Copy the example file and edit the local copy:
 
-The application is not publicly deployed by this source setup. A working live sign-in and database require the project credentials and hosted configurations above. The app intentionally reports setup unavailable until those are supplied; it does not use fake authentication or seeded sample data. Set a retention and deletion schedule for reports and verification documents before broad public use; this version does not automatically purge either.
+```bash
+cp .env.example .env.local
+```
+
+Set the following values in `.env.local`:
+
+| Variable | Purpose |
+| --- | --- |
+| `NEXT_PUBLIC_SUPABASE_URL` | Supabase project URL, such as `https://<project-ref>.supabase.co` |
+| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Supabase public anon key; safe for browser use when database policies are configured |
+| `SUPABASE_SERVICE_ROLE_KEY` | Server-only Supabase key used by API routes. Never expose or commit it. |
+| `RATE_LIMIT_SECRET` | Long random secret used to hash network identifiers for rate limiting |
+| `NEXT_PUBLIC_APP_URL` | Canonical app origin, for example `http://localhost:3000` locally |
+| `TIDECLOAK_CONFIG_PATH` | Path to a local TideCloak adapter JSON file; defaults to `./tidecloak.json` |
+| `TIDECLOAK_CONFIG_JSON` | Optional server-only alternative containing the adapter JSON as a single-line JSON string; takes precedence over the path |
+
+Do not commit `.env.local` or `tidecloak.json`. The service-role key and TideCloak configuration must remain server-side.
+
+### 3. Create the database schema
+
+In the Supabase dashboard, open the SQL Editor and run [`supabase/migrations/0001_resolve_it.sql`](supabase/migrations/0001_resolve_it.sql). The migration creates schema objects and policies; it does not insert example organizations, users, or cases. Keep the service-role key restricted to server-side deployment variables.
+
+### 4. Start the development server
+
+```bash
+npm run dev
+```
+
+Open [http://localhost:3000](http://localhost:3000). The public landing/reporting flow is at `/`, the organization workspace is at `/organization`, and the privacy page is at `/privacy`.
+
+Without valid Supabase settings, database-backed routes are unavailable. Staff sign-in and organization management also require a reachable TideCloak realm and valid adapter configuration; the app does not provide a fake-authentication bypass or a public platform-admin signup.
+
+## Build and run for production
+
+```bash
+npm run build
+npm run start
+```
+
+Configure the same environment variables in the hosting provider. Set `NEXT_PUBLIC_APP_URL` to the deployed HTTPS origin. Configure the TideCloak client for that origin and its exact callback/logout URLs, including `/auth/redirect` and any SDK-required silent SSO check URL. Provision the first trusted platform administrator manually in TideCloak with the `platform-admin` role.
+
+## Data and access
+
+- **Supabase PostgreSQL** stores organizations, verification applications, departments, memberships, invitations, cases, messages, workflow events, separately stored optional contact details, and short-lived rate-limit hashes.
+- **Supabase private Storage** holds organization verification documents in the `organization-evidence` bucket. Case attachments are not supported in this version.
+- **TideCloak** manages staff identity and IAM. It does not store Resolve It cases or provide the application database. Server routes verify staff identity and organization membership before returning organization data.
+- Anonymous follow-up credentials are shown once; only a salted scrypt verifier is stored. Identifying details included in the report text can still reveal a reporter's identity.
+- The public directory lists approved organizations only. A fresh setup intentionally has no user-facing records until real organizations and reports are submitted.
+
+Before inviting real users, confirm the migration and storage policies, test tenant isolation and admin approval, and configure provider logging, retention, backups, and report/document deletion policies.

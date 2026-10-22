@@ -3,17 +3,6 @@ import { jsonError } from "@/lib/tide";
 
 export const dynamic = "force-dynamic";
 
-function errorSummary(error: unknown) {
-  if (error instanceof Error) return error.message;
-  if (error && typeof error === "object") {
-    const value = error as { code?: unknown; message?: unknown };
-    const code = typeof value.code === "string" ? value.code : "";
-    const message = typeof value.message === "string" ? value.message : "";
-    return [code, message].filter(Boolean).join(": ") || "unknown error object";
-  }
-  return typeof error === "string" ? error : "unknown error";
-}
-
 export async function GET() {
   if (!hasDbConfig()) return Response.json({ organizations: [] }, { headers: { "Cache-Control": "no-store" } });
   try {
@@ -25,7 +14,10 @@ export async function GET() {
     if (depError) throw depError;
     return Response.json({ organizations: (orgs ?? []).map(o => ({ ...o, departments: (departments ?? []).filter(d => d.organization_id === o.id).map(d => ({ id: d.id, name: d.name })) })) }, { headers: { "Cache-Control": "no-store" } });
   } catch (error) {
-    console.error("organizations_directory_failed", errorSummary(error));
+    // Do not log provider messages: malformed authorization headers can echo
+    // API keys into runtime logs. Keep diagnostics non-sensitive.
+    const errorType = error instanceof Error ? error.name : "provider_error";
+    console.error("organizations_directory_failed", errorType);
     return jsonError("The organization directory is temporarily unavailable.", 503);
   }
 }
