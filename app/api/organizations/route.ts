@@ -4,7 +4,7 @@ import { jsonError } from "@/lib/tide";
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  if (!hasDbConfig()) return Response.json({ organizations: [] }, { headers: { "Cache-Control": "no-store" } });
+  if (!hasDbConfig()) return jsonError("The organization directory is not connected to its database yet.", 503);
   try {
     const db = getAdminDb();
     const { data: orgs, error } = await db.from("organizations").select("id,name,category,description").eq("status", "approved").order("name");

@@ -48,7 +48,7 @@ In the Supabase dashboard, open the SQL Editor and run [`supabase/migrations/000
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). The public landing/reporting flow is at `/`, the organization workspace is at `/organization`, and the privacy page is at `/privacy`.
+Open [http://localhost:3000](http://localhost:3000). The landing page is at `/`, reporting is at `/report`, case tracking is at `/track`, the organization workspace is at `/organization`, and the privacy page is at `/privacy`.
 
 Without valid Supabase settings, database-backed routes are unavailable. Staff sign-in and organization management also require a reachable TideCloak realm and valid adapter configuration; the app does not provide a fake-authentication bypass or a public platform-admin signup.
 
