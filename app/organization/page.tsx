@@ -16,7 +16,17 @@ async function jsonFetch(url: string, init?: RequestInit) {
   return json;
 }
 
-function PortalContent() {
+function DemoWorkspace({ onExit }: { onExit: () => void }) {
+  const demoCases: CaseItem[] = [
+    { id: "demo-1", subject: "Accessible route to the science building", body: "The temporary ramp near the east entrance is blocked by stored materials. Please review the route before the afternoon classes.", category: "Accessibility", status: "under_review", created_at: "2026-10-21T09:30:00Z", departments: { name: "Campus Services" } },
+    { id: "demo-2", subject: "Request for clearer lab safety signage", body: "The eyewash station in the second floor teaching lab is difficult to spot from the main aisle.", category: "Safety", status: "received", created_at: "2026-10-20T14:10:00Z", departments: { name: "Health and Safety" } },
+    { id: "demo-3", subject: "Library study room booking issue", body: "The room booking display showed the room as available while another group had a confirmed reservation.", category: "Facilities", status: "resolved", created_at: "2026-10-18T06:45:00Z", departments: { name: "Student Services" } },
+  ];
+
+  return <main className="portal-shell"><header className="portal-header"><a className="brand" href="/"><span className="brand-mark">R</span> Resolve It <span className="portal-badge">ORGANIZATION PORTAL</span></a><button className="quiet-button" onClick={onExit}>Exit demo</button></header><section className="portal-content"><div className="demo-banner" role="note"><b>DEMO MODE · READ ONLY</b><span>This fictional workspace and its sample cases exist only for this preview. Nothing here is stored or sent.</span></div><div className="portal-heading"><div><div className="eyebrow">SAMPLE WORKSPACE</div><h1 className="portal-title">Welcome to your<br/><em>response desk.</em></h1></div><span className="demo-pill">FICTIONAL DEMO</span></div><div className="org-summary"><div className="org-symbol">N</div><div><strong>Northstar College (Demo)</strong><small>College / university · Owner</small></div><span className="approved-pill">SAMPLE</span></div><div className="dash-grid"><section className="dashboard-panel"><div className="dash-title"><div><span className="side-kicker">SAMPLE INCOMING</span><h2>Concern queue</h2></div><span className="count">{demoCases.length}</span></div>{demoCases.map(item => <article className="case-row" key={item.id}><div className="case-top"><span className="status-pill">{item.status.replaceAll("_", " ")}</span><span className="case-date">Sample case</span></div><h3>{item.subject}</h3><p className="case-copy">{item.body}</p><div className="case-meta">{item.category} · {item.departments?.name} · Submitter identity withheld</div></article>)}</section><aside className="dashboard-panel settings-panel"><span className="side-kicker">SAMPLE SETUP</span><h2>Departments</h2><p>In a real workspace, organization owners can configure departments and invite staff.</p>{["Campus Services", "Health and Safety", "Student Services"].map(name => <div className="department-row" key={name}>{name}<span>SAMPLE</span></div>)}<div className="privacy-callout"><b>Read-only preview</b><span>Sign in with TideCloak to access or manage real organization records.</span></div></aside></div></section></main>;
+}
+
+function PortalContent({ onDemoOpen }: { onDemoOpen: () => void }) {
   const { login, logout, authenticated, isInitializing, hasRealmRole } = useTideCloak();
   const [memberships, setMemberships] = useState<Membership[]>([]);
   const [applications, setApplications] = useState<Application[]>([]);
@@ -127,7 +137,7 @@ function PortalContent() {
   }
 
   if (isInitializing) return <main className="portal-shell"><div className="portal-card">Checking TideCloak session…</div></main>;
-  if (!authenticated) return <main className="portal-shell"><a className="brand" href="/"><span className="brand-mark">R</span> Resolve It</a><section className="portal-card"><div className="eyebrow">ORGANIZATION ACCESS</div><h1 className="portal-title">A private space<br/>to <em>resolve concerns.</em></h1><p>Sign in through TideCloak to apply for an organization workspace or manage an approved organization.</p><button className="submit-button" onClick={() => login()}>Continue with TideCloak <span>→</span></button><a className="back-link" href="/">← Back to public reporting</a></section></main>;
+  if (!authenticated) return <main className="portal-shell"><a className="brand" href="/"><span className="brand-mark">R</span> Resolve It</a><section className="portal-card"><div className="eyebrow">ORGANIZATION ACCESS</div><h1 className="portal-title">A private space<br/>to <em>resolve concerns.</em></h1><p>Sign in through TideCloak to apply for an organization workspace or manage an approved organization.</p><button className="submit-button" onClick={() => login()}>Continue with TideCloak <span>→</span></button><button className="demo-link" onClick={onDemoOpen}>Explore read-only demo <span>→</span></button><a className="back-link" href="/">← Back to public reporting</a></section></main>;
 
   const isAdmin = Boolean(hasRealmRole?.("platform-admin"));
   return <main className="portal-shell"><header className="portal-header"><a className="brand" href="/"><span className="brand-mark">R</span> Resolve It <span className="portal-badge">ORGANIZATION PORTAL</span></a><button className="quiet-button" onClick={() => logout()}>Sign out ↗</button></header><section className="portal-content"><div className="portal-heading"><div><div className="eyebrow">VERIFIED WORKSPACES</div><h1 className="portal-title">Welcome to your<br/><em>response desk.</em></h1></div><span className="secure-pill">● TideCloak session active</span></div>{notice && <div className="notice" role="status">{notice}</div>}
@@ -139,8 +149,10 @@ function PortalContent() {
 }
 
 export default function OrganizationPage() {
+  const [demoOpen, setDemoOpen] = useState(false);
   const state = useTideConfigState();
+  if (demoOpen) return <DemoWorkspace onExit={() => setDemoOpen(false)} />;
   if (!state.ready) return <main className="portal-shell"><div className="portal-card">Loading organization access…</div></main>;
-  if (!state.configured) return <main className="portal-shell"><a className="brand" href="/"><span className="brand-mark">R</span> Resolve It</a><section className="portal-card"><div className="eyebrow">TIDECLOAK SETUP NEEDED</div><h1 className="portal-title">Connect your<br/><em>staff identity.</em></h1><p>Staff access is not simulated. Add the TideCloak app adapter file and configure your realm before organization sign-in is enabled.</p><a className="back-link" href="/">← Back to public reporting</a></section></main>;
-  return <PortalContent/>;
+  if (!state.configured) return <main className="portal-shell"><a className="brand" href="/"><span className="brand-mark">R</span> Resolve It</a><section className="portal-card"><div className="eyebrow">TIDECLOAK SETUP NEEDED</div><h1 className="portal-title">Connect your<br/><em>staff identity.</em></h1><p>Staff sign-in uses TideCloak. While identity setup is unavailable, you can preview the portal with fictional, read-only sample content.</p><button className="submit-button" onClick={() => setDemoOpen(true)}>Explore read-only demo <span>→</span></button><a className="back-link" href="/">← Back to public reporting</a></section></main>;
+  return <PortalContent onDemoOpen={() => setDemoOpen(true)}/>;
 }

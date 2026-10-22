@@ -50,7 +50,7 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000). The landing page is at `/`, reporting is at `/report`, case tracking is at `/track`, the organization workspace is at `/organization`, and the privacy page is at `/privacy`.
 
-Without valid Supabase settings, database-backed routes are unavailable. Staff sign-in and organization management also require a reachable TideCloak realm and valid adapter configuration; the app does not provide a fake-authentication bypass or a public platform-admin signup.
+Without valid Supabase settings, database-backed routes are unavailable. Staff sign-in and organization management also require a reachable TideCloak realm and valid adapter configuration; the app does not provide a fake-authentication bypass or a public platform-admin signup. The organization portal also offers a clearly labeled, read-only demo workspace with fictional sample content; it is a frontend preview only and does not create a TideCloak session or access/write database records.
 
 ## Build and run for production
 
