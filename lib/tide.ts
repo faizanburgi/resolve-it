@@ -4,14 +4,25 @@ import path from "node:path";
 import { verifyTideCloakToken } from "@tidecloak/nextjs/server";
 
 export type StaffIdentity = { subject: string; email: string | null; emailVerified: boolean; token: Record<string, any> };
+export type TideAdapterConfig = Record<string, unknown>;
+
+function isAdapterConfig(value: unknown): value is TideAdapterConfig {
+  return value !== null && typeof value === "object" && !Array.isArray(value) && Object.keys(value).length > 0;
+}
 
 export async function loadTideConfig() {
   if (process.env.TIDECLOAK_CONFIG_JSON) {
-    try { return JSON.parse(process.env.TIDECLOAK_CONFIG_JSON); }
+    try {
+      const config: unknown = JSON.parse(process.env.TIDECLOAK_CONFIG_JSON);
+      return isAdapterConfig(config) ? config : null;
+    }
     catch { return null; }
   }
   const configPath = path.resolve(process.cwd(), process.env.TIDECLOAK_CONFIG_PATH || "tidecloak.json");
-  try { return JSON.parse(await readFile(configPath, "utf8")); }
+  try {
+    const config: unknown = JSON.parse(await readFile(configPath, "utf8"));
+    return isAdapterConfig(config) ? config : null;
+  }
   catch { return null; }
 }
 
