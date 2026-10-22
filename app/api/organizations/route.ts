@@ -13,5 +13,8 @@ export async function GET() {
     const { data: departments, error: depError } = ids.length ? await db.from("departments").select("id,organization_id,name").in("organization_id", ids).eq("active", true).order("name") : { data: [], error: null };
     if (depError) throw depError;
     return Response.json({ organizations: (orgs ?? []).map(o => ({ ...o, departments: (departments ?? []).filter(d => d.organization_id === o.id).map(d => ({ id: d.id, name: d.name })) })) }, { headers: { "Cache-Control": "no-store" } });
-  } catch { return jsonError("The organization directory is temporarily unavailable.", 503); }
+  } catch (error) {
+    console.error("organizations_directory_failed", error instanceof Error ? error.message : "unknown error");
+    return jsonError("The organization directory is temporarily unavailable.", 503);
+  }
 }
