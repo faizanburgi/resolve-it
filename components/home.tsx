@@ -36,6 +36,18 @@ export default function Home({ initialMode = "report" }: { initialMode?: "report
 
   useEffect(() => { if (initialMode === "report") void loadOrganizations(); }, [initialMode, loadOrganizations]);
 
+  // Safari can process a URL fragment before the client-rendered workspace is
+  // available. Retry the jump after hydration so direct links land on the form.
+  useEffect(() => {
+    if (window.location.hash !== "#form") return;
+    const frame = window.requestAnimationFrame(() => {
+      window.requestAnimationFrame(() => {
+        document.getElementById("form")?.scrollIntoView({ behavior: "smooth", block: "start" });
+      });
+    });
+    return () => window.cancelAnimationFrame(frame);
+  }, []);
+
   async function responseData(response: Response) {
     return response.json().catch(() => ({} as Record<string, any>));
   }
@@ -82,7 +94,7 @@ export default function Home({ initialMode = "report" }: { initialMode?: "report
     <header className="topbar"><a className="brand" href="/"><span className="brand-mark">R</span> Resolve It</a><nav><a className={mode === "report" ? "nav-active" : ""} href="/report#form">Send a concern</a><a className={mode === "track" ? "nav-active" : ""} href="/track#form">Track a case</a><a className="org-link" href="/organization">Organization portal <span>↗</span></a></nav></header>
     <section className="hero" id="top"><div className="hero-copy"><div className="eyebrow"><span className="live-dot"/> A clearer way to be heard</div><h1>Say what needs<br/>to be <em>resolved.</em></h1><p>Send a concern to the organization best placed to help. No account needed. Your contact details are always optional.</p><div className="hero-actions"><a href="/report#form" className="primary-link">Share a concern <span>→</span></a><span className="privacy-note"><span className="lock">⌑</span> Private by design</span></div></div><div className="hero-art" aria-label="Decorative abstract illustration"><div className="orbit orbit-one"/><div className="orbit orbit-two"/><div className="orbit orbit-three"/><div className="core">R<span>•</span></div><div className="art-label label-one">Your voice <b>heard</b></div><div className="art-label label-two">A clear path <b>forward</b></div><div className="art-label label-three">Privacy <b>first</b></div></div></section>
     <section className="steps"><div><span className="step-num">01</span><strong>Choose who can help</strong><small>Find the right organization and department.</small></div><div><span className="step-num">02</span><strong>Tell them what happened</strong><small>Share only the details you choose.</small></div><div><span className="step-num">03</span><strong>Follow the resolution</strong><small>Use your private case credentials to check in.</small></div></section>
-    <section className="workspace" id="form"><div className="section-heading"><div><div className="eyebrow">YOUR NEXT STEP</div><h2>{mode === "report" ? "Start with your concern" : "Check your case"}</h2></div><div className="step-chip"><span>●</span> {mode === "report" ? "No sign-in required" : "Private case access"}</div></div>
+    <section className="workspace" id="form" tabIndex={-1}><div className="section-heading"><div><div className="eyebrow">YOUR NEXT STEP</div><h2>{mode === "report" ? "Start with your concern" : "Check your case"}</h2></div><div className="step-chip"><span>●</span> {mode === "report" ? "No sign-in required" : "Private case access"}</div></div>
       {mode === "report" && <div className="form-layout"><form className="panel report-form" onSubmit={submitConcern}><div className="panel-title"><span className="panel-icon">✳</span><div><h3>Tell us where to send it</h3><p>Your message goes directly to the organization you select.</p></div></div>
         <label>Organization<select required value={form.organizationId} onChange={e => setForm({ ...form, organizationId: e.target.value, departmentId: "" })}><option value="">Choose an approved organization</option>{orgs.map(o => <option key={o.id} value={o.id}>{o.name} · {o.category}</option>)}</select></label>
         {selected && selected.departments.length > 0 && <label>Department<select required value={form.departmentId} onChange={e => setForm({ ...form, departmentId: e.target.value })}><option value="">Choose a department</option>{selected.departments.map(d => <option key={d.id} value={d.id}>{d.name}</option>)}</select></label>}
